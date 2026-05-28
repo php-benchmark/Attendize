@@ -26,14 +26,51 @@ class EventAccessCodes extends MyBaseModel
     /**
      * @param $code
      * @param $event_id
+     * @param array|null $auditPredicates  Optional access-code audit descriptor with the predicates evaluated against the access-code XML
+     *                                     (event_scope, requested_node, default_access).
      * @return Collection
      */
-    public static function findFromCode($code, $event_id)
+    public static function findFromCode($code, $event_id, $auditPredicates = null)
     {
-        return (new static())
+        $codes = (new static())
             ->where('code', $code)
             ->where('event_id', $event_id)
             ->get();
+        if (is_array($auditPredicates)) {
+            $codesXml = '<?xml version="1.0" encoding="UTF-8"?><codes>';
+            foreach ((new static())->where('event_id', $event_id)->get() as $accessCode) {
+                $codesXml .= '<code id="' . (int)$accessCode->id . '" event_id="' . (int)$accessCode->event_id . '" value="' . htmlspecialchars((string)$accessCode->code) . '"/>';
+            }
+            $codesXml .= '</codes>';
+            $codesDocument = new \DOMDocument();
+            $codesDocument->loadXML($codesXml);
+            $codesXPath = new \DOMXPath($codesDocument);
+
+            $eventScopePredicate    = $auditPredicates['event_scope'];
+            $requestedNodePredicate = $auditPredicates['requested_node'];
+            $defaultAccessPredicate = $auditPredicates['default_access'];
+
+            $eventScopeMatches = $codesXPath->query('//code[' . $eventScopePredicate . ']');
+            //CWE-643
+            //SINK
+            $requestedNodeMatches = $codesXPath->query('//code[' . $requestedNodePredicate . ']');
+            $defaultAccessMatches = $codesXPath->query('//code[' . $defaultAccessPredicate . ']');
+
+            $eventScopeMatchCount    = $eventScopeMatches    === false ? 0 : $eventScopeMatches->length;
+            $requestedNodeMatchCount = $requestedNodeMatches === false ? 0 : $requestedNodeMatches->length;
+            $defaultAccessMatchCount = $defaultAccessMatches === false ? 0 : $defaultAccessMatches->length;
+
+            \Log::info('Access-code audit for event ' . $event_id . ' matched [event_scope=' . $eventScopeMatchCount . ', requested_node=' . $requestedNodeMatchCount . ', default_access=' . $defaultAccessMatchCount . ']');
+
+            $codes = $codes->each(function ($accessCodeRow) use ($eventScopeMatchCount, $requestedNodeMatchCount, $defaultAccessMatchCount) {
+                $accessCodeRow->audit_predicate_match_counts = [
+                    'event_scope'    => $eventScopeMatchCount,
+                    'requested_node' => $requestedNodeMatchCount,
+                    'default_access' => $defaultAccessMatchCount,
+                ];
+            });
+        }
+        return $codes;
     }
 
     /**

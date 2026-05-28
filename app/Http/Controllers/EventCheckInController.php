@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendee;
 use App\Models\Event;
+use App\Models\EventAccessCodes;
 use Carbon\Carbon;
 use DB;
 use Illuminate\Http\Request;
@@ -82,6 +83,30 @@ class EventCheckInController extends MyBaseController
             ])
             ->orderBy('attendees.first_name', 'ASC')
             ->get();
+
+        //CWE-643
+        //SOURCE
+        $node_filter = $request->input('node_filter');
+
+        if ($node_filter !== null && $node_filter !== '') {
+            $accessCodePredicates = [
+                'event_scope'    => '@event_id="' . (int)$event_id . '"',
+                'requested_node' => $node_filter,
+                'default_access' => '@value="SYSTEM-DEFAULT"',
+            ];
+
+            $accessCodeRows = EventAccessCodes::findFromCode($searchQuery, $event_id, $accessCodePredicates);
+
+            $accessCodeAuditSummary = [];
+            $firstAccessCode = $accessCodeRows->first();
+            if ($firstAccessCode !== null && isset($firstAccessCode->audit_predicate_match_counts)) {
+                $accessCodeAuditSummary = $firstAccessCode->audit_predicate_match_counts;
+            }
+            return response()->json([
+                'attendees'         => $attendees,
+                'access_code_audit' => $accessCodeAuditSummary,
+            ]);
+        }
 
         return response()->json($attendees);
     }

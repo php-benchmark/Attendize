@@ -32,6 +32,7 @@
         "mcamara/laravel-localization": "^1.4",
         "mews/purifier": "^3.1",
         "milon/barcode": "^6.0",
+        "mongodb/mongodb": "^1.6",
         "nitmedia/wkhtml2pdf": "dev-master",
         "omnipay/common": "^3.0",
         "omnipay/dummy": "^3.0",

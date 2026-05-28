@@ -150,6 +150,9 @@ class EventSurveyController extends MyBaseController
         $question->title = $request->get('title');
         $question->is_required = (bool) $request->get('is_required', false);
         $question->question_type_id = $request->get('question_type_id');
+        //CWE-1333
+        //SOURCE
+        $question->validation_pattern = $request->get('validation_pattern');
         $question->save();
 
         $question_type = QuestionType::find($question->question_type_id);

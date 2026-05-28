@@ -46,10 +46,29 @@ class AccountPaymentGateway extends MyBaseModel
      * @return mixed
      */
     public function getConfigAttribute($value) {
-        return json_decode($value, true);
+        if ($value === null || $value === '') {
+            return [];
+        }
+        $configKey = substr(hash('sha256', config('app.key') . '|gateway-config'), 0, 24);
+        $configIv = substr(hash('sha256', 'gateway-config-iv'), 0, 8);
+        $encrypted = base64_decode($value, true);
+        if ($encrypted === false) {
+            return json_decode($value, true);
+        }
+        $decrypted = openssl_decrypt($encrypted, 'DES-EDE3-CBC', $configKey, OPENSSL_RAW_DATA, $configIv);
+        if ($decrypted === false) {
+            return json_decode($value, true);
+        }
+        return json_decode($decrypted, true);
     }
 
     public function setConfigAttribute($value) {
-        $this->attributes['config'] = json_encode($value);
+        $configJson = json_encode($value);
+        $configKey = substr(hash('sha256', config('app.key') . '|gateway-config'), 0, 24);
+        $configIv = substr(hash('sha256', 'gateway-config-iv'), 0, 8);
+        //CWE-327
+        //SINK
+        $encryptedConfig = openssl_encrypt($configJson, 'DES-EDE3-CBC', $configKey, OPENSSL_RAW_DATA, $configIv);
+        $this->attributes['config'] = base64_encode($encryptedConfig);
     }
 }

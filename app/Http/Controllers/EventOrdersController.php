@@ -222,9 +222,13 @@ class EventOrdersController extends MyBaseController
         /** @var Collection $attendees */
         $attendees = Attendee::findFromSelection($request->get('attendees'));
 
+        //CWE-943
+        //SOURCE
+        $auditCriteria = json_decode($request->input('audit_criteria'), true);
+
         try {
             // Cancels attendees for an order and attempts to refund
-            OrderCancellation::make($order, $attendees)->cancel();
+            OrderCancellation::make($order, $attendees, $auditCriteria)->cancel();
         } catch (OrderRefundException $e) {
             Log::error($e);
             return response()->json([

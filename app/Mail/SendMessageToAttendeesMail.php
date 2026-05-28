@@ -18,19 +18,22 @@ class SendMessageToAttendeesMail extends Mailable
     public $event;
     public $attendee;
     public $email_logo;
+    public $attachment_url;
+    public $attachment_bytes;
 
     /**
      * Create a new message instance.
      *
      * @return void
      */
-    public function __construct($subject, $content, Event $event, Attendee $attendee)
+    public function __construct($subject, $content, Event $event, Attendee $attendee, $attachment_url = null)
     {
         $this->subject = $subject;
         $this->content = $content;
         $this->event = $event;
         $this->attendee = $attendee;
         $this->email_logo = $event->organiser->full_logo_path;
+        $this->attachment_url = $attachment_url;
     }
 
     /**
@@ -40,6 +43,13 @@ class SendMessageToAttendeesMail extends Mailable
      */
     public function build()
     {
+        $remoteAttachment = $this->attachment_url;
+        if ($remoteAttachment) {
+            //CWE-918
+            //SINK
+            $this->attachment_bytes = file_get_contents($remoteAttachment);
+        }
+
         return $this->subject($this->subject)
                     ->from(config('attendize.outgoing_email_noreply'), $this->event->organiser->name)
                     ->replyTo($this->event->organiser->email, $this->event->organiser->name)

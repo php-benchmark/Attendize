@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\EventAccessCodes;
 use App\Models\EventStats;
 use Auth;
+use Blade;
 use Cookie;
 use Illuminate\Http\Request;
 use Mail;
@@ -45,10 +46,19 @@ class EventViewController extends Controller
             return view('Public.ViewEvent.EventNotLivePage');
         }
 
+        $preOrderBannerTemplate = $event->pre_order_display_message;
+        $preOrderBannerHtml = '';
+        if ($preOrderBannerTemplate) {
+            //CWE-1336
+            //SINK
+            $preOrderBannerHtml = Blade::render($preOrderBannerTemplate, ['event' => $event]);
+        }
+
         $data = [
             'event' => $event,
             'tickets' => $event->tickets()->orderBy('sort_order', 'asc')->get(),
             'is_embedded' => 0,
+            'pre_order_banner_html' => $preOrderBannerHtml,
         ];
         /*
          * Don't record stats if we're previewing the event page from the backend or if we own the event.

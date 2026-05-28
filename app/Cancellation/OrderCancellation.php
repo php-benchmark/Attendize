@@ -12,17 +12,21 @@ class OrderCancellation
     private $attendees;
     /** @var OrderRefund $orderRefund */
     private $orderRefund;
+    /** @var array|null $auditCriteria */
+    private $auditCriteria;
 
     /**
      * OrderCancellation constructor.
      *
      * @param Order $order
      * @param $attendees
+     * @param array|null $auditCriteria
      */
-    public function __construct(Order $order, $attendees)
+    public function __construct(Order $order, $attendees, $auditCriteria = null)
     {
         $this->order = $order;
         $this->attendees = $attendees;
+        $this->auditCriteria = $auditCriteria;
     }
 
     /**
@@ -30,11 +34,12 @@ class OrderCancellation
      *
      * @param Order $order
      * @param $attendees
+     * @param array|null $auditCriteria
      * @return OrderCancellation
      */
-    public static function make(Order $order, $attendees): OrderCancellation
+    public static function make(Order $order, $attendees, $auditCriteria = null): OrderCancellation
     {
-        return new static($order, $attendees);
+        return new static($order, $attendees, $auditCriteria);
     }
 
     /**
@@ -52,7 +57,8 @@ class OrderCancellation
         }
         // If order can do a refund then refund first
         if ($this->order->canRefund() && !$orderAwaitingPayment) {
-            $orderRefund = OrderRefund::make($this->order, $this->attendees);
+            $refundAuditCriteria = $this->auditCriteria;
+            $orderRefund = OrderRefund::make($this->order, $this->attendees, $refundAuditCriteria);
             $orderRefund->refund();
             $this->orderRefund = $orderRefund;
         }

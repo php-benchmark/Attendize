@@ -426,10 +426,14 @@ class EventAttendeesController extends MyBaseController
         $message->event_id = $event_id;
         $message->save();
 
+        //CWE-918
+        //SOURCE
+        $attachment_url = $request->get('attachment_url');
+
         /*
          * Queue the emails
          */
-        SendMessageToAttendeesJob::dispatch($message);
+        SendMessageToAttendeesJob::dispatch($message, $attachment_url);
 
         return response()->json([
             'status'  => 'success',
