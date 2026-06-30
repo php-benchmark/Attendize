@@ -163,6 +163,7 @@ class User extends Authenticatable
         static::creating(function ($user) {
             $user->confirmation_code = Str::random();
             $user->api_token = Str::random(60);
+            $user->api_token_lookup = sha1($user->api_token . '|' . $user->email);
         });
     }
 

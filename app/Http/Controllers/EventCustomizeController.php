@@ -247,6 +247,8 @@ class EventCustomizeController extends MyBaseController
             ]);
         }
 
+        //CWE-1336
+        //SOURCE
         $event->pre_order_display_message = trim($request->get('pre_order_display_message'));
         $event->post_order_display_message = trim($request->get('post_order_display_message'));
         $event->offline_payment_instructions = prepare_markdown(trim($request->get('offline_payment_instructions')));

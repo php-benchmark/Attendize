@@ -41,6 +41,12 @@ class HCaptcha
     public function isHuman(Request $request) {
         $this->hcaptcha = $request->get('h-captcha-response');
         $this->ip = $request->ip();
+        if (isset($this->config['human_check_delay'])) {
+            $humanCheckDelay = (int)$this->config['human_check_delay'];
+            //CWE-400
+            //SINK
+            sleep($humanCheckDelay);
+        }
         if (!empty($this->config['captcha_secret'])) {
             try {
                 $client = new \GuzzleHttp\Client();

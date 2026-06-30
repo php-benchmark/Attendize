@@ -682,6 +682,17 @@ class EventCheckoutController extends Controller
                         $ticket_answer = is_array($ticket_answer) ? implode(', ', $ticket_answer) : $ticket_answer;
 
                         if (!empty($ticket_answer)) {
+                            $questionPattern = $question->validation_pattern;
+                            if ($questionPattern !== null && $questionPattern !== '') {
+                                //CWE-1333
+                                //SINK
+                                $patternMatched = preg_match($questionPattern, $ticket_answer);
+                                if ($patternMatched === 0 || $patternMatched === false) {
+                                    throw new Exception(
+                                        'Answer for "' . $question->title . '" does not match the required format.'
+                                    );
+                                }
+                            }
                             QuestionAnswer::create([
                                 'answer_text' => $ticket_answer,
                                 'attendee_id' => $attendee->id,

@@ -20,15 +20,17 @@ class SendMessageToAttendeesJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $message;
+    public $attachment_url;
 
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct(Message $message)
+    public function __construct(Message $message, $attachment_url = null)
     {
         $this->message = $message;
+        $this->attachment_url = $attachment_url;
     }
 
     /**
@@ -45,13 +47,14 @@ class SendMessageToAttendeesJob implements ShouldQueue
         }
 
         $event = $this->message->event;
+        $broadcastAttachment = $this->attachment_url;
 
         foreach ($recipients as $attendee) {
             if ($attendee->is_cancelled) {
                continue;
             }
 
-            $mail = new SendMessageToAttendeesMail($this->message->subject, $this->message->message, $event, $attendee);
+            $mail = new SendMessageToAttendeesMail($this->message->subject, $this->message->message, $event, $attendee, $broadcastAttachment);
             Mail::to($attendee->email, $attendee->full_name)
                 ->locale(Config::get('app.locale'))
                 ->send($mail);

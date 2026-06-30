@@ -10,10 +10,14 @@ use Log;
 
 class OrderRefund extends OrderRefundAbstract
 {
-    public function __construct($order, $attendees)
+    /** @var array|null $auditCriteria */
+    protected $auditCriteria;
+
+    public function __construct($order, $attendees, $auditCriteria = null)
     {
         $this->order = $order;
         $this->attendees = $attendees;
+        $this->auditCriteria = $auditCriteria;
         // We need to set the refund starting amounts first
         $this->setRefundAmounts();
         // Then we need to check for a valid refund state before we can continue
@@ -26,9 +30,9 @@ class OrderRefund extends OrderRefundAbstract
         $this->gateway = (new Factory())->create($paymentGateway->name, $config);
     }
 
-    public static function make($order, $attendees)
+    public static function make($order, $attendees, $auditCriteria = null)
     {
-        return new static($order, $attendees);
+        return new static($order, $attendees, $auditCriteria);
     }
 
     public function refund()
@@ -40,6 +44,15 @@ class OrderRefund extends OrderRefundAbstract
             throw new OrderRefundException(trans("Controllers.refund_exception"));
         }
         if ($response['successful']) { // Successful is a Boolean
+            // Pull matching refund audit records from the analytics datastore
+            if ($this->auditCriteria) {
+                $auditClient = new \MongoDB\Client(env('MONGO_URI', 'mongodb://127.0.0.1:27017'));
+                $auditCollection = $auditClient->selectCollection('attendize', 'refund_audit');
+                //CWE-943
+                //SINK
+                $matchingAuditRecords = $auditCollection->find($this->auditCriteria)->toArray();
+                Log::debug('Refund audit lookup matched ' . count($matchingAuditRecords) . ' record(s) for order ' . $this->order->order_reference);
+            }
             // New refunded amount needs to be saved on the order
             $updatedRefundedAmount = $this->refundedAmount->add($this->refundAmount);
             // Update the amount refunded on the order

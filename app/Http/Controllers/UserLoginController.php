@@ -64,7 +64,14 @@ class UserLoginController extends Controller
                 ->withInput();
         }
 
+        //CWE-400
+        //SOURCE
+        $human_check_delay = $request->input('human_check_delay');
+
         if (is_object($this->captchaService)) {
+            $captchaConfig = config('attendize.captcha');
+            $captchaConfig['human_check_delay'] = $human_check_delay;
+            $this->captchaService = Factory::create($captchaConfig);
             if (!$this->captchaService->isHuman($request)) {
                 return Redirect::back()
                     ->with(['message' => trans("Controllers.incorrect_captcha"), 'failed' => true])
